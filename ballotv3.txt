@@ -1,0 +1,86 @@
+pragma solidity ^0.5.11;
+
+contract Ballot{
+    
+    struct Voter{
+        uint weight;
+        bool voted;
+        uint8 vote;
+    }
+    
+    enum Stage {Init,Reg,Vote,Done} 
+    Stage public stage = Stage.Init;
+    
+    uint starttime;
+    
+    struct Proposal{
+        uint votecount;
+    }
+    
+    Proposal[] proposals;
+    
+    mapping(address => Voter)voters;
+    
+    address chairperson;
+    
+      
+    modifier StageCheck(Stage stag){
+        require (stage == stag);
+        _;
+    }
+    
+    constructor(uint8 n) public{
+        chairperson=msg.sender;
+        voters[msg.sender].weight=2;
+        proposals.length=n;
+        starttime=now;
+    }
+  
+    function register( address candidate) public StageCheck(Stage.Reg){
+        if(msg.sender!=chairperson||voters[candidate].voted){return;}
+        voters[msg.sender].voted=false;
+        voters[msg.sender].weight=1;
+        
+        if(now>starttime+30 seconds)
+        {
+            stage=Stage.Vote;
+            starttime=now;
+        }
+    }
+    
+    function vote(uint8 tovote) public StageCheck(Stage.Vote) {
+        Voter storage sender = voters[msg.sender];
+        if(sender.voted || tovote > proposals.length) return;
+        sender.voted=true;
+        sender.vote=tovote;
+        proposals[tovote].votecount+=sender.weight;
+        
+        if(now==starttime+30 seconds)
+        {
+          stage = Stage.Done;  
+          starttime=now;
+            
+        }
+        
+    } 
+    
+    function pickwinner() public StageCheck(Stage.Done)  returns(uint8 winner)
+    {
+        uint winnervotes=0;
+        
+        for(uint8 prop=0;prop<proposals.length;prop++)
+        {
+            if(proposals[prop].votecount>winnervotes)
+            {
+                winner=prop;
+                winnervotes=proposals[prop].votecount;
+            }
+        }
+        
+    }
+    
+    
+    
+    
+    
+}
